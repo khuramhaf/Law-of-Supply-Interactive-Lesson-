@@ -303,9 +303,9 @@
     // FIX: Tightened margins specifically for mobile screens
         const margin = { 
             top: 35, 
-            right: isMobile ? 20 : 45,  // Drops to 15px on mobile, stays 45px on desktop
+            right: isMobile ? 22 : 45,  // Drops to 15px on mobile, stays 45px on desktop
             bottom: 55, 
-            left: isMobile ? 65 : 65    // Slightly tightened left margin too so graph stays balanced
+            left: isMobile ? 40 : 40    // Slightly tightened left margin too so graph stays balanced
         };
         const chartWidth = width - margin.left - margin.right;
         const chartHeight = height - margin.top - margin.bottom;
@@ -335,17 +335,24 @@
         const yTicks = d3.range(0, 21, 4);
 
         // Numeric Tick Text Element Printers
-        g.selectAll(".x-tick").data(xTicks).enter().append("text")
-            .attr("class", "axis-text").attr("x", d => xScale(d)).attr("y", chartHeight + 28)
-            .attr("text-anchor", "middle").text(d => d);
+        // Numeric Tick Text Element Printers
+g.selectAll(".x-tick").data(xTicks).enter().append("text")
+    .attr("class", "axis-text")
+    .attr("x", d => xScale(d))
+    .attr("y", chartHeight + 20) // REDUCED from 28 to 16 (moves numbers up closer to X-axis)
+    .attr("text-anchor", "middle")
+    .text(d => d);
 
-        g.selectAll(".y-tick").data(yTicks).enter().append("text")
-            .attr("class", "axis-text").attr("x", -15).attr("y", d => yScale(d) + 6)
-            .attr("text-anchor", "end").text(d => d);
+g.selectAll(".y-tick").data(yTicks).enter().append("text")
+    .attr("class", "axis-text")
+    .attr("x", -8)               // REDUCED from -15 to -8 (moves numbers right closer to Y-axis)
+    .attr("y", d => yScale(d) + 6) 
+    .attr("text-anchor", "end")
+    .text(d => d);
 
         // Grid Title Labels Text Nodes
         g.append("text").attr("class", "axis-label").attr("x", chartWidth).attr("y", chartHeight + 50).attr("text-anchor", "end").text("Quantity Supplied (Q_s)");
-        g.append("text").attr("class", "axis-label").attr("transform", "rotate(-90)").attr("y", -45).attr("x", 0).attr("text-anchor", "end").text("Price (P)");
+        g.append("text").attr("class", "axis-label").attr("y", -15).attr("x", 50).attr("text-anchor", "end").text("Price (P)");
 
         // Render Red Upward-Sloping Supply Line (Stroke width 8)
         g.append("line")
