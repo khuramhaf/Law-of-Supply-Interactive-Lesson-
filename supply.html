@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Supply Curve Lesson</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --text-main: #1f2937;
+            --bg-light: #f3f4f6;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            color: var(--text-main);
+            background-color: #fafafa;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        /* Master Grid Split Layout */
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr; /* Left section handles 55-60% width */
+            gap: 25px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            box-sizing: border-box;
+        }
+
+        .interactive-section {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        /* Cleaned, Simplified Lesson Container */
+        .lesson-text-section {
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-light);
+            padding: 24px;
+            border-left: 5px solid var(--primary);
+            border-radius: 6px;
+            height: fit-content;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            margin-top: 0;
+            color: #111827;
+        }
+
+        .lesson-text-section p, .lesson-text-section li {
+            font-size: 1.1rem;
+            line-height: 1.5;
+            color: #374151;
+        }
+
+        .lesson-text-section ul {
+            padding-left: 20px;
+            margin-top: 5px;
+        }
+
+        .lesson-text-section li {
+            margin-bottom: 8px;
+        }
+
+        /* Chart Canvas Size Configurations */
+        #chart-wrapper {
+            width: 100%;
+            height: 55vh; /* Standard desktop percentage bounds */
+            position: relative;
+            touch-action: none; /* Smooth mobile dragging */
+        }
+
+        /* Responsive Mobile Layout Rules Toggle */
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+            }
+            .workspace-grid {
+                grid-template-columns: 1fr; /* Single column layout */
+                padding: 12px;
+                border-radius: 0;
+                box-shadow: none;
+                gap: 15px;
+            }
+            .interactive-section {
+                order: 1; /* Interactive graph sits at the top */
+            }
+            #chart-wrapper {
+                height: 55vh; /* Extended workspace height layout rule */
+            }
+            .lesson-text-section {
+                order: 2; /* Simple instructions sit underneath */
+                border-left: none;
+                border-top: 5px solid var(--primary);
+                padding: 15px;
+            }
+        }
+
+        /* Controls Panel Options Grid */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-top: 15px;
+            background: #f8fafc;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+
+        .control-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .label-group label {
+            font-size: 1.35rem; /* Large font size for Price and Quantity labels */
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .slider-input-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+
+        /* Thick, Touch-Friendly Sliders */
+        .thick-slider {
+            flex-grow: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 18px; /* Chunky touch slider track height */
+            border-radius: 9px;
+            background: #cbd5e1;
+            outline: none;
+        }
+
+        .thick-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+        }
+
+        .thick-slider::-moz-range-thumb {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+        }
+
+        /* Chunky Form Input Fields */
+        .num-input {
+            width: 95px;
+            padding: 10px 5px;
+            font-size: 1.25rem; /* Larger font layout sizes */
+            border: 2px solid #94a3b8;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 800;
+            color: var(--primary-dark);
+        }
+
+        .num-input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        /* Vector Graphic Styles Elements Rules */
+        .axis-line {
+            stroke: #000000;
+            stroke-width: 4px; /* Bold axis rules */
+        }
+
+        .axis-text {
+            font-size: 19px; /* Large font size for numbers */
+            font-weight: bold;
+            fill: #000000;
+        }
+
+        .axis-label {
+            font-size: 19px; /* Large font size for axis titles */
+            font-weight: 900;
+            fill: #1e293b;
+        }
+
+        .supply-line {
+            stroke: #dc2626;
+            stroke-width: 6px; /* Stroke width 8 */
+            stroke-linecap: butt; /* Perfectly locks flush onto vector targets */
+        }
+
+        .projection-line {
+            stroke: #475569;
+            stroke-width: 5px; /* Stroke width 6 */
+            stroke-dasharray: 7,7;
+        }
+
+        .interactive-dot {
+            fill: var(--primary);
+            cursor: grab;
+        }
+        
+        .interactive-dot:active {
+            cursor: grabbing;
+        }
+
+        .dot-glow {
+            fill: var(--primary);
+            fill-opacity: 0.22;
+            cursor: grab; /* Shows the hand icon when hovering over the glow */
+        }
+        .dot-glow:active {
+            cursor: grabbing;
+        }
+    </style>
+</head>
+<body>
+
+<div class="workspace-grid">
+    
+    <div class="interactive-section">
+        <div id="chart-wrapper"></div>
+
+        <div class="controls">
+            <div class="control-row">
+                <div class="label-group">
+                    <label for="price-slider">Price (P)</label>
+                </div>
+                <div class="slider-input-container">
+                    <input type="range" id="price-slider" class="thick-slider" min="0" max="20" step="0.05" value="10">
+                    <input type="number" id="price-input" class="num-input" min="0" max="20" step="0.1" value="10.0">
+                </div>
+            </div>
+
+            <div class="control-row">
+                <div class="label-group">
+                    <label for="quant-slider">Quantity supplied (Q_s)</label>
+                </div>
+                <div class="slider-input-container">
+                    <input type="range" id="quant-slider" class="thick-slider" min="0" max="10" step="0.025" value="5">
+                    <input type="number" id="quant-input" class="num-input" min="0" max="10" step="0.1" value="5.0">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="lesson-text-section">
+        <h1>How to Use This Graph</h1>
+        <p>This graph shows how the supply of a product changes when its price goes up or down. It uses this simple formula:</p>
+        <p style="text-align: center; font-size: 1.35rem; font-weight: bold; color: #dc2626; margin: 10px 0;">P = 2Q<sub>s</sub></p>
+        <p><strong>The Golden Rule:</strong> When the Price rises, the Quantity supplied goes up! When the Price drops, the Quantity supplied drops.</p>
+        
+        <p><strong>Try these 3 tools to see it work:</strong></p>
+        <ul>
+            <li><strong>Drag the Blue Dot:</strong> Click and hold the blue dot on the red line, then move it along the curve.</li>
+            <li><strong>Use the Sliders:</strong> Move the thick blue sliders below the graph with your mouse or finger.</li>
+            <li><strong>Type Numbers:</strong> Click inside the number boxes, type any number you want, and hit Enter.</li>
+        </ul>
+    </div>
+
+</div>
+
+<script>
+    const wrapper = d3.select("#chart-wrapper");
+    
+    function renderChart() {
+        wrapper.selectAll("*").remove();
+
+        const width = wrapper.node().getBoundingClientRect().width;
+        const height = wrapper.node().getBoundingClientRect().height;
+
+        // FIXED: Increased top from 15 to 35 and right from 35 to 45 to stop the dot from clipping
+        const margin = { top: 35, right: 45, bottom: 55, left: 65 };
+        const chartWidth = width - margin.left - margin.right;
+        const chartHeight = height - margin.top - margin.bottom;
+
+        const svg = wrapper.append("svg")
+            .attr("width", "100%")
+            .attr("height", "100%")
+            .attr("viewBox", `0 0 ${width} ${height}`)
+            .attr("preserveAspectRatio", "xMidYMid meet");
+
+        const g = svg.append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+        // Equations Setup Matrix Definitions for Supply (P = 2Qs)
+        function getQ(P) { return P / 2; }
+        function getP(Q) { return 2 * Q; }
+
+        // Core Alignment Update: Domains are structured cleanly for limits [Q: 0 to 10] and [P: 0 to 20]
+        const xScale = d3.scaleLinear().domain([0, 10]).range([0, chartWidth]);
+        const yScale = d3.scaleLinear().domain([0, 20]).range([chartHeight, 0]);
+
+        // Draw Axes Vector Paths
+        g.append("line").attr("class", "axis-line").attr("x1", 0).attr("y1", chartHeight).attr("x2", chartWidth).attr("y2", chartHeight);
+        g.append("line").attr("class", "axis-line").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", chartHeight);
+
+        const xTicks = d3.range(0, 11, 2);
+        const yTicks = d3.range(0, 21, 4);
+
+        // Numeric Tick Text Element Printers
+        g.selectAll(".x-tick").data(xTicks).enter().append("text")
+            .attr("class", "axis-text").attr("x", d => xScale(d)).attr("y", chartHeight + 28)
+            .attr("text-anchor", "middle").text(d => d);
+
+        g.selectAll(".y-tick").data(yTicks).enter().append("text")
+            .attr("class", "axis-text").attr("x", -15).attr("y", d => yScale(d) + 6)
+            .attr("text-anchor", "end").text(d => d);
+
+        // Grid Title Labels Text Nodes
+        g.append("text").attr("class", "axis-label").attr("x", chartWidth).attr("y", chartHeight + 50).attr("text-anchor", "end").text("Quantity Supplied (Q_s)");
+        g.append("text").attr("class", "axis-label").attr("transform", "rotate(-90)").attr("y", -45).attr("x", 0).attr("text-anchor", "end").text("Price (P)");
+
+        // Render Red Upward-Sloping Supply Line (Stroke width 8)
+        g.append("line")
+            .attr("class", "supply-line")
+            .attr("x1", xScale(0)).attr("y1", yScale(0))
+            .attr("x2", xScale(10)).attr("y2", yScale(20));
+
+        // Coordinate Intersection Track Guideline Paths (Stroke width 6)
+        const horizLine = g.append("line").attr("class", "projection-line");
+        const vertLine = g.append("line").attr("class", "projection-line");
+
+        // Custom radius mapping setup explicitly tracking 0.17 system coordinate metrics scale sizes
+        const dotRadius = Math.max(13, xScale(0.17) - xScale(0));
+        const glowRadius = dotRadius * 2.0; // Soft outer glow circle
+
+        const glow = g.append("circle").attr("class", "dot-glow").attr("r", glowRadius);
+        const dot = g.append("circle").attr("class", "interactive-dot").attr("r", dotRadius);
+
+        // Universal UI Sync Driver Function
+        function updateAll(price, origin) {
+            price = Math.max(0, Math.min(20, price));
+            let quantity = getQ(price);
+
+            let cx = xScale(quantity);
+            let cy = yScale(price);
+
+            dot.attr("cx", cx).attr("cy", cy);
+            glow.attr("cx", cx).attr("cy", cy);
+
+            horizLine.attr("x1", 0).attr("y1", cy).attr("x2", cx).attr("y2", cy);
+            vertLine.attr("x1", cx).attr("y1", chartHeight).attr("x2", cx).attr("y2", cy);
+
+            if (origin !== 'price-slider') d3.select("#price-slider").property("value", price);
+            if (origin !== 'price-input') d3.select("#price-input").property("value", parseFloat(price.toFixed(2)));
+            if (origin !== 'quant-slider') d3.select("#quant-slider").property("value", quantity);
+            if (origin !== 'quant-input') d3.select("#quant-input").property("value", parseFloat(quantity.toFixed(2)));
+        }
+
+        // --- Drag Behavior Processing Pipeline Hook ---
+        const dragBehavior = d3.drag()
+            .on("drag", function(event) {
+                let currentQ = xScale.invert(event.x);
+                currentQ = Math.max(0, Math.min(10, currentQ));
+                updateAll(getP(currentQ), 'drag');
+            });
+        dot.call(dragBehavior);
+        glow.call(dragBehavior);
+
+        // --- Form Interaction Observers Matrix ---
+        d3.select("#price-slider").on("input", function() {
+            updateAll(+this.value, 'price-slider');
+        });
+
+        d3.select("#quant-slider").on("input", function() {
+            updateAll(getP(+this.value), 'quant-slider');
+        });
+
+        d3.select("#price-input").on("input", function() {
+            let val = +this.value;
+            if(!isNaN(val)) updateAll(val, 'price-input');
+        });
+
+        d3.select("#quant-input").on("input", function() {
+            let val = +this.value;
+            if(!isNaN(val)) updateAll(getP(val), 'quant-input');
+        });
+
+        // Initialize state engine values on startup loads
+        const initialPrice = +d3.select("#price-slider").property("value");
+        updateAll(initialPrice, 'init');
+    }
+
+    renderChart();
+    window.addEventListener("resize", renderChart);
+</script>
+
+</body>
+</html>
