@@ -298,7 +298,15 @@
         const height = wrapper.node().getBoundingClientRect().height;
 
         // FIXED: Increased top from 15 to 35 and right from 35 to 45 to stop the dot from clipping
-        const margin = { top: 35, right: 45, bottom: 55, left: 65 };
+       const isMobile = window.innerWidth <= 768;
+
+    // FIX: Tightened margins specifically for mobile screens
+        const margin = { 
+            top: 35, 
+            right: isMobile ? 15 : 45,  // Drops to 15px on mobile, stays 45px on desktop
+            bottom: 55, 
+            left: isMobile ? 50 : 65    // Slightly tightened left margin too so graph stays balanced
+        };
         const chartWidth = width - margin.left - margin.right;
         const chartHeight = height - margin.top - margin.bottom;
 
