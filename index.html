@@ -81,7 +81,7 @@
             width: 100%;
             height: 55vh; /* Standard desktop percentage bounds */
             position: relative;
-            touch-action: none; /* Smooth mobile dragging */
+            touch-action: pan-y; /* Smooth mobile dragging */
         }
 
         /* Responsive Mobile Layout Rules Toggle */
@@ -223,6 +223,8 @@
         .interactive-dot {
             fill: var(--primary);
             cursor: grab;
+
+            touch-action: none
         }
         
         .interactive-dot:active {
@@ -233,6 +235,7 @@
             fill: var(--primary);
             fill-opacity: 0.22;
             cursor: grab; /* Shows the hand icon when hovering over the glow */
+            touch-action: none
         }
         .dot-glow:active {
             cursor: grabbing;
