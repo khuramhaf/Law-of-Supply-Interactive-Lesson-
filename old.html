@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Law of Demand — Interactive Lesson</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="questions.js"></script>
+<style>
+  :root{
+    --ink:#1a1a2e;
+    --sub:#5a5a72;
+    --accent:#2b6cb0;
+    --accent-dark:#1e4e8c;
+    --line:#e2e5ec;
+    --bg-panel:#f7f8fa;
+    --good:#2f9e44;
+    --radius:10px;
+    --proj:#9aa3b5;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);
+    background:#eef1f6;
+    overflow:hidden;
+  }
+  .app{
+    display:flex;
+    width:100%;
+    height:100vh;
+    gap:10px;
+    padding: 10px 20px 10px 10px;
+    
+  }
+  .col-left{
+    flex:0 0 60%;
+    max-width:60%;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    min-height:0;
+  }
+  .col-right{
+    flex:0 0 40%;
+    max-width:40%;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    overflow-y:auto;
+
+  }
+  .card{
+    background:#ffffff;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:10px 20px 20px 20px;
+    box-shadow:0 1px 2px rgba(20,20,40,0.04);
+  }
+
+  
+
+  /* Graph */
+  .graph-card{
+    padding:6px;
+    flex:1 1 auto;
+    min-height:0;
+    display:flex;
+  }
+  #graph-svg {
+  display:block;
+  width:100%;
+  height:100%;
+  background:#ffffff;
+  cursor:grab;
+  /* Prevent text selection and visual callouts on long-press */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+  .axis path, .axis line{
+    stroke:#333;
+    shape-rendering:crispEdges;
+    stroke-width: 2.5px; /* Increased stroke width */
+  }
+  .axis text{
+    fill:var(--sub);
+    font-size:16px; /* Increased font size */
+    font-weight: 600;
+  }
+  .demand-line{
+    fill:none;
+    stroke:var(--accent-dark);
+    stroke-width:4px; /* Increased line stroke width */
+  }
+  .proj-line{
+    stroke:var(--proj);
+    stroke-width:2px; /* Increased line stroke width */
+    stroke-dasharray:5,4;
+  }
+  .drag-dot{
+    fill:#ffffff;
+    stroke:var(--accent);
+    stroke-width:4px;
+    cursor:grab;
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+  }
+  .drag-dot:active{cursor:grabbing;}
+  .axis-label{
+    fill:var(--ink);
+    font-size:16px; /* Increased axis label font size */
+    font-weight:600;
+  }
+
+  /* data display */
+  .data-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    flex:0 0 auto;
+    padding:8px 10px;
+  }
+  .data-block{
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:6px 10px;
+    text-align:center;
+  }
+  .data-block .label{
+    font-size:13px; /* Increased font size */
+    color:var(--sub);
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    margin-bottom:2px;
+  }
+  .data-block .value{
+    font-size:22px; /* Increased font size for general data blocks */
+    font-weight:700;
+    color:var(--accent-dark);
+  }
+  /* Keep original font size for calculated Equation and Revenue on desktop */
+  #equation-display, #revenue-display {
+    font-size: 18px;
+  }
+
+  /* ---------- Desktop controls (sliders) ---------- */
+  .controls-desktop{
+    flex:0 0 auto;
+    padding:8px 10px;
+  }
+  .controls-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .control-block{
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:6px 10px;
+  }
+  .control-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    margin-bottom:4px;
+  }
+  .control-top label{
+    font-size:15px; /* Increased font size */
+    font-weight:600;
+    color:var(--ink);
+  }
+  .control-top input[type="number"]{
+    width:70px;
+    padding:3px 6px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-size:16px; /* Increased font size */
+    text-align:right;
+  }
+  input[type="range"]{
+    width:100%;
+    accent-color:var(--accent);
+    height:18px;
+  }
+
+  /* ---------- Mobile controls (stepper rows) ---------- */
+  .controls-mobile{
+    display:none;
+    flex:0 0 auto;
+    padding:8px 10px;
+    flex-direction:column;
+    gap:8px;
+  }
+  
+.stepper-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px; /* Reduced gap slightly to fit inner items snugly */
+
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px;
+    
+    /* 👇 Crucial: allows child offsets to calculate correctly */
+    position: relative; 
+    
+    /* 👇 Shrink the block container size slightly to help push buttons out */
+    margin: 0 21px; /* 21px is exactly half of your 42px button width */
+}
+
+/* Target the minus button (first element) */
+.stepper-row .step-btn:first-child {
+    margin-left: -29px; /* Half button width (21px) + padding offset (8px) */
+    position: relative;
+    z-index: 2;
+}
+
+/* Target the plus button (last element) */
+.stepper-row .step-btn:last-child {
+    margin-right: -29px; /* Half button width (21px) + padding offset (8px) */
+    position: relative;
+    z-index: 2;
+}
+
+/* Adjust layout inputs to make sure they scale cleanly inside the remaining space */
+.step-label {
+    flex: 1; /* Allows label to take up remaining space smoothly */
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+
+}
+
+.stepper-row input[type="number"] {
+    width: 65px; /* Slightly reduced to account for tighter container footprint */
+    height: 42px;
+    text-align: center;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 17px;
+    padding: 0 4px;
+    flex-shrink: 0;
+}
+
+.step-btn {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 24px;
+    font-weight: 700;
+    flex-shrink: 0;
+
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+
+    /* 👇 Prevents text selection/copy popup on long-press */
+    -webkit-user-select: none;  /* Safari/Chrome iOS */
+    -moz-user-select: none;     /* Firefox */
+    -ms-user-select: none;      /* IE/Edge */
+    user-select: none;          /* Standard */
+    -webkit-touch-callout: none; /* Disables standard iOS long-press menu */
+}
+  .step-btn:active{
+    background:var(--accent);
+    color:#fff;
+  }
+
+  /* Quiz */
+  .quiz-header {
+  display: flex;
+  flex-direction: column; /* Forces layout into two lines */
+  gap: 8px;
+  margin-bottom: 12px;
+}
+  .quiz-header h2{
+    
+    font-size:20px;
+    margin:0;
+
+    width: 100%;
+  
+  
+  
+  } 
+  
+  .quiz-header .quiz-sub-row {
+  display: flex;
+  justify-content: space-between; /* Pushes tracker left, buttons right */
+  align-items: center;
+  width: 100%;
+}
+  
+  /* Increased font size */
+  #q-index{
+    font-size:16px; /* Increased font size */
+    color:var(--sub);
+    order: 1;
+  }
+  .quiz-question{
+    font-size:16.5px; /* Increased font size */
+    line-height:1.4;
+    min-height:44px;
+    margin-bottom:6px;
+  }
+ 
+  .quiz-buttons{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+    order: 2;
+  }
+  .quiz-buttons .nav-group{
+    display:flex;
+    gap:20px;
+  }
+
+  .quiz-options{ display:flex; flex-direction:column; gap:6px; margin-bottom:8px; }
+.opt-btn{ text-align:left; padding:8px 10px; }
+.opt-btn.correct{ background:#eaf7ec; border-color:var(--good); color:var(--good); }
+.opt-btn.wrong{ background:#fdecec; border-color:#e03131; color:#e03131; }
+.quiz-status{ font-size:15px; font-weight:600; min-height:18px; margin-bottom:8px; } /* Increased font size */
+.quiz-status.correct{ color:var(--good); }
+.quiz-status.pending{ color:var(--sub); }
+  button{
+    font-family:inherit;
+    font-size:18px; /* Increased font size */
+    padding:6px 12px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:#fff;
+    cursor:pointer;
+    color:var(--ink);
+    transition:background 0.15s, transform 0.05s;
+  }
+  button:hover{background:var(--bg-panel);}
+  button:active{transform:translateY(1px);}
+  button.primary{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+  }
+  button.primary:hover{background:var(--accent-dark);}
+  button:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+  }
+
+  /* Docs */
+  .docs p{
+    font-size:15.5px; /* Increased font size */
+    line-height:1.45;
+    color:#333;
+    margin:0 0 6px 0;
+  }
+  .docs h2{font-size:17px;margin:0 0 6px 0;} /* Increased font size */
+  .docs ul{
+    margin:0;
+    padding-left:16px;
+    font-size:15.5px; /* Increased font size */
+    line-height:1.45;
+    color:#333;
+  }
+  .docs li{margin-bottom:4px;}
+
+  @media (max-width: 900px){
+    html,body{overflow:auto;}
+    .app{flex-direction:column; height:auto;padding-right:10px;}
+    .col-left, .col-right{flex:1 1 auto; max-width:100%;}
+    .col-left{height:auto;}
+    
+    /* Removed fixed min-height and added aspect-ratio to get rid of white margin below graph */
+    .graph-card{
+      min-height:auto;
+      aspect-ratio: 560 / 420;
+    }
+    
+    .controls-desktop{display:none;}
+    .controls-mobile{display:flex;}
+
+    /* Reduced font size for Equation and Revenue on mobile to force it onto a single line */
+    #equation-display, #revenue-display {
+      font-size: 13px !important;
+      white-space: nowrap;
+    }
+
+    .axis text{
+      font-size:18px;
+      font-weight: 600;
+    }
+
+  }
+
+
+  /* Ghost Animation Styling no 1*/
+  .ghost-dot {
+    fill: #ffffff;
+    stroke: var(--accent);
+    stroke-width: 3px;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  .ghost-proj {
+    stroke: var(--proj);
+    stroke-width: 2.5px; /* Increased stroke width */
+    stroke-dasharray: 4,4;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- LEFT COLUMN -->
+  <div class="col-left">
+
+    <div class="card graph-card">
+      <svg id="graph-svg" viewBox="0 0 560 420" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+
+    <div class="card data-row">
+      <div class="data-block">
+        <div class="label">Active Equation</div>
+        <div class="value" id="equation-display">P = 2Q</div>
+      </div>
+      <div class="data-block">
+        <div class="label">Revenue (P × Q)</div>
+        <div class="value" id="revenue-display">Revenue: 50</div>
+      </div>
+    </div>
+
+    <!-- Desktop sliders -->
+    <div class="card controls-desktop">
+      <div class="controls-row">
+        <div class="control-block">
+          <div class="control-top">
+            <label for="price-number">Price (P)</label>
+            <input type="number" id="price-number" min="0" max="20" step="0.2" value="10">
+          </div>
+          <input type="range" id="price-range" min="0" max="20" step="0.2" value="10">
+        </div>
+        <div class="control-block">
+          <div class="control-top">
+            <label for="qty-number">Quantity (Q)</label>
+            <input type="number" id="qty-number" min="0" max="10" step="0.1" value="5">
+          </div>
+          <input type="range" id="qty-range" min="0" max="10" step="0.1" value="5">
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile stepper rows -->
+    <div class="card controls-mobile">
+    
+
+     <div class="stepper-row">
+
+    <button class="step-btn" id="price-minus" type="button">−</button>
+
+    <span>← Price</span>
+
+    <input
+        type="number"
+        id="price-number-m"
+        min="0"
+        max="20"
+        step="0.2"
+        value="10">
+
+    <span>Price →</span>
+
+    <button class="step-btn" id="price-plus" type="button">+</button>
+
+</div>
+
+<div class="stepper-row">
+
+    <button class="step-btn" id="qty-minus" type="button">−</button>
+
+    <span>← Qty</span>
+
+    <input
+        type="number"
+        id="qty-number-m"
+        min="0"
+        max="10"
+        step="0.1"
+        value="5">
+
+    <span>Qty →</span>
+
+    <button class="step-btn" id="qty-plus" type="button">+</button>
+
+</div>
+<!--new code end-->
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="col-right">
+
+  <div class="card">
+  <div class="quiz-header">
+    <h2>Learn by Doing</h2>
+    
+    <!-- New wrapper row to separate layout from the main title -->
+    <div class="quiz-sub-row">
+      <span id="q-index">Question 1 of 3</span>
+      
+      <div class="quiz-buttons">
+        <div class="nav-group">
+          <button id="q-prev">Previous</button>
+          <button id="q-next">Next</button>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+  <div class="quiz-question" id="q-text"></div>
+  <div class="quiz-options" id="q-options"></div>
+  <div class="quiz-status" id="q-status"></div>
+</div>
+
+    <div class="card docs">
+      <h1>Understanding the Law of Supply</h1>
+
+<p>
+  This lesson explores the <strong>Law of Supply</strong>: as the price of a good
+  rises, the quantity supplied increases, and as the price falls, the quantity
+  supplied decreases. The graph shows a linear inverse supply curve,
+  <strong>P = 2Q</strong>, where Price is on the vertical axis and Quantity is on
+  the horizontal axis.
+</p>
+
+<h2>How to Use the Playground</h2>
+
+<ul>
+  <li>Drag the dot along the supply curve to change Price and Quantity together.</li>
+  <li>Use the number field, slider, or +/− buttons—Price and Quantity always stay linked by the equation <strong>P = 2Q</strong>.</li>
+  <li>Watch the Revenue block update live as <strong>Total Revenue = Price × Quantity</strong>.</li>
+  <li>Observe how higher prices are associated with larger quantities supplied, illustrating the Law of Supply.</li>
+</ul>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+(function(){
+
+  /* ---------------------------------------------------------
+     STATE MODEL
+  --------------------------------------------------------- */
+  const state = {
+    Q: 4,
+    P: 8, // P = 20 - 2Q
+    get R(){ return this.P * this.Q; }
+  };
+
+  const Q_MIN = 0, Q_MAX = 10, Q_STEP = 0.1;
+  const P_MIN = 0, P_MAX = 20, P_STEP = 0.2;
+
+
+function priceFromQty(q){ return 2 * q; }
+  function qtyFromPrice(p){ return p / 2; }
+
+  function roundStep(value, step){
+    return Math.round(value / step) * step;
+  }
+  function clamp(value, min, max){
+    return Math.max(min, Math.min(max, value));
+  }
+  function fix(n){ return Math.round(n * 100) / 100; }
+
+  function setFromQ(rawQ){
+    
+    if (!Number.isFinite(rawQ)) return;
+  let q = clamp(rawQ, Q_MIN, Q_MAX);
+    q = fix(roundStep(q, Q_STEP));
+    let p = fix(priceFromQty(q));
+    p = clamp(p, P_MIN, P_MAX);
+    state.Q = q;
+    state.P = p;
+    render();
+  }
+
+  function setFromP(rawP){
+    
+    if (!Number.isFinite(rawP)) return;
+  let p = clamp(rawP, P_MIN, P_MAX);
+    p = fix(roundStep(p, P_STEP));
+    let q = fix(qtyFromPrice(p));
+    q = clamp(q, Q_MIN, Q_MAX);
+    state.P = p;
+    state.Q = q;
+    render();
+  }
+
+  /* ---------------------------------------------------------
+     D3 GRAPH SETUP
+  --------------------------------------------------------- */
+  const svgEl = d3.select("#graph-svg");
+  const viewW = 560, viewH = 420;
+  const margin = {top: 16, right: 20, bottom: 40, left: 48};
+  const innerW = viewW - margin.left - margin.right;
+  const innerH = viewH - margin.top - margin.bottom;
+
+  const g = svgEl.append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const xScale = d3.scaleLinear().domain([Q_MIN, Q_MAX]).range([0, innerW]);
+  const yScale = d3.scaleLinear().domain([P_MIN, P_MAX]).range([innerH, 0]);
+
+  const xAxis = d3.axisBottom(xScale).ticks(10).tickSizeOuter(0);
+  const yAxis = d3.axisLeft(yScale).ticks(10).tickSizeOuter(0);
+
+  g.append("g")
+    .attr("class", "axis x-axis")
+    .attr("transform", `translate(0,${innerH})`)
+    .call(xAxis);
+
+  g.append("g")
+    .attr("class", "axis y-axis")
+    .call(yAxis);
+
+  g.append("text")
+    .attr("class", "axis-label")
+    .attr("x", innerW / 2)
+    .attr("y", innerH + 38)
+    .attr("text-anchor", "middle")
+    .text("Quantity (Q)");
+
+  g.append("text")
+    .attr("class", "axis-label")
+    .attr("transform", "rotate(-90)")
+    .attr("x", -innerH / 2)
+    .attr("y", -32)
+    .attr("text-anchor", "middle")
+    .text("Price (P)");
+
+  // Demand line
+  const lineData = d3.range(Q_MIN, Q_MAX + 0.01, 0.05).map(q => ({
+    q: q,
+    p: clamp(priceFromQty(q), P_MIN, P_MAX)
+  }));
+
+  const lineGen = d3.line()
+    .x(d => xScale(d.q))
+    .y(d => yScale(d.p));
+
+  g.append("path")
+    .datum(lineData)
+    .attr("class", "demand-line")
+    .attr("d", lineGen);
+
+  // Projection lines (dashed) — price line horizontal, qty line vertical
+  const priceLine = g.append("line").attr("class", "proj-line");
+  const qtyLine = g.append("line").attr("class", "proj-line");
+
+  // Draggable dot
+  const isMobile = window.innerWidth <= 900;
+  const dot = g.append("circle")
+    .attr("class", "drag-dot")
+    .attr("r", isMobile ? 18 : 12)
+    .attr("cx", xScale(state.Q))
+    .attr("cy", yScale(state.P));
+
+//animation code start
+
+let isDragging = false;
+let animTimer = null;
+
+
+  const ghostPriceLine = g.append("line").attr("class", "ghost-proj").style("display", "none");
+  const ghostQtyLine = g.append("line").attr("class", "ghost-proj").style("display", "none");
+  const ghostDot = g.append("circle").attr("class", "ghost-dot").attr("r", 12).style("display", "none");
+
+  function stopGhostAnimation() {
+    if (animTimer) {
+      animTimer.stop();
+      animTimer = null;
+    }
+    ghostDot.style("display", "none");
+    ghostPriceLine.style("display", "none");
+    ghostQtyLine.style("display", "none");
+  }
+
+  function startGhostAnimation() {
+    stopGhostAnimation(); 
+
+    const item = quizQuestions[qIndex];
+    // Safety check to ensure this specific question expects a graph adjustment
+    if (!item || !item.validationState) return;
+
+    // Read directly from your question object structure (price or quantity)
+    let targetP = null;
+    if (item.validationState.price !== undefined) {
+      targetP = item.validationState.price;
+    } else if (item.validationState.quantity !== undefined) {
+      targetP = priceFromQty(item.validationState.quantity);
+    } else if (item.validationState.totalRevenue !== undefined) {
+      // Solve R = P * Q with Q = P / 2 for P: R = P^2 / 2 -> P^2 = 2R -> P = sqrt(2R)
+      const R = item.validationState.totalRevenue;
+      targetP = Math.sqrt(2 * R);
+    }
+
+    if (targetP === null) return;
+
+    const isCorrect = checkStateValidation(item, state);
+    if (isCorrect || isDragging) return;
+
+    // --- Dynamic Display Logic Changes ---
+    ghostDot.style("display", null);
+    
+    // Check if price exists in validationState
+    if (item.validationState.price !== undefined) {
+      ghostPriceLine.style("display", null);
+    } else {
+      ghostPriceLine.style("display", "none");
+    }
+
+    // Check if quantity exists in validationState
+    if (item.validationState.quantity !== undefined) {
+      ghostQtyLine.style("display", null);
+    } else {
+      ghostQtyLine.style("display", "none");
+    }
+    
+    // Fallback: If it's a totalRevenue question, you'll likely want both lines visible
+    if (item.validationState.totalRevenue !== undefined) {
+      ghostPriceLine.style("display", null);
+      ghostQtyLine.style("display", null);
+    }
+    // -------------------------------------
+
+    animTimer = d3.timer(elapsed => {
+      const duration = 2000; // Loop cycle length (2 seconds)
+      const t = (elapsed % duration) / duration; 
+
+      const currentP = state.P;
+      const targetQ = qtyFromPrice(targetP);
+      const currentQ = state.Q;
+
+      // Animate from current positions out toward the targets
+      const animatedP = currentP + (targetP - currentP) * t;
+      const animatedQ = currentQ + (targetQ - currentQ) * t;
+
+      const gCx = xScale(animatedQ);
+      const gCy = yScale(animatedP);
+
+      ghostDot.attr("cx", gCx).attr("cy", gCy);
+      ghostPriceLine.attr("x1", 0).attr("y1", gCy).attr("x2", gCx).attr("y2", gCy);
+      ghostQtyLine.attr("x1", gCx).attr("y1", innerH).attr("x2", gCx).attr("y2", gCy);
+    });
+}
+
+  //end of animation code
+
+  const drag = d3.drag()
+    .on("start", function(){ 
+      isDragging = true;
+      stopGhostAnimation();
+      d3.select(this).attr("cursor","grabbing"); 
+    })
+    .on("drag", function(event){
+      const rawQ = xScale.invert(event.x);
+      setFromQ(rawQ);
+    })
+    .on("end", function(){ 
+      isDragging = false;
+      d3.select(this).attr("cursor","grab");
+      
+      const item = quizQuestions[qIndex];
+      if (item && item.validationState && !checkStateValidation(item, state)) {
+        startGhostAnimation();
+      }
+    });
+
+  dot.call(drag);
+
+  /* ---------------------------------------------------------
+     CONTROL ELEMENTS (desktop)
+  --------------------------------------------------------- */
+  const priceNumber = document.getElementById("price-number");
+  const priceRange  = document.getElementById("price-range");
+  const qtyNumber   = document.getElementById("qty-number");
+  const qtyRange    = document.getElementById("qty-range");
+
+  /* CONTROL ELEMENTS (mobile) */
+  const priceNumberM = document.getElementById("price-number-m");
+  const qtyNumberM   = document.getElementById("qty-number-m");
+  const priceMinus = document.getElementById("price-minus");
+  const pricePlus  = document.getElementById("price-plus");
+  const qtyMinus   = document.getElementById("qty-minus");
+  const qtyPlus    = document.getElementById("qty-plus");
+
+  const revenueDisplay = document.getElementById("revenue-display");
+  const equationDisplay = document.getElementById("equation-display");
+
+  /* ---------------------------------------------------------
+     LONG-PRESS STEPPER BUTTONS
+     15 steps per second during hold (~66.7ms interval)
+  --------------------------------------------------------- */
+  // Helper to handle stopping animation when desktop/mobile inputs change
+  function handleInputInteraction(action, value) {
+  stopGhostAnimation(); 
+  action(value);
+}
+
+  priceNumber.addEventListener("input", e => handleInputInteraction(setFromP, parseFloat(e.target.value)));
+  priceRange.addEventListener("input", e => handleInputInteraction(setFromP, parseFloat(e.target.value)));
+  qtyNumber.addEventListener("input", e => handleInputInteraction(setFromQ, parseFloat(e.target.value)));
+  qtyRange.addEventListener("input", e => handleInputInteraction(setFromQ, parseFloat(e.target.value)));
+
+  priceNumberM.addEventListener("input", e => handleInputInteraction(setFromP, parseFloat(e.target.value)));
+  qtyNumberM.addEventListener("input", e => handleInputInteraction(setFromQ, parseFloat(e.target.value)));
+
+
+
+  
+
+function bindStepper(btn, dir, type) {
+
+  const HOLD_DELAY = 300;
+  const REPEAT_INTERVAL = 70;
+  const MOVE_THRESHOLD = 20;
+
+  let holdTimer = null;
+  let repeatTimer = null;
+
+  let startX = 0;
+  let startY = 0;
+
+  let longPress = false;
+  let cancelled = false;
+  let activePointerId = null;
+
+  function step() {
+    stopGhostAnimation();
+
+    if (type === "price") {
+      setFromP(state.P + dir * P_STEP);
+    } else {
+      setFromQ(state.Q + dir * Q_STEP);
+    }
+  }
+
+  function clearAll() {
+    clearTimeout(holdTimer);
+    clearInterval(repeatTimer);
+
+    holdTimer = null;
+    repeatTimer = null;
+  }
+
+  function finish() {
+  if (activePointerId !== null) {
+    try { btn.releasePointerCapture(activePointerId); } catch (err) {}
+  }
+  clearAll();
+  cancelled = false;
+  longPress = false;
+  activePointerId = null;
+}
+
+  btn.addEventListener("pointerdown", e => {
+
+    if (!e.isPrimary) return;
+
+    if (activePointerId !== null) return;
+
+    activePointerId = e.pointerId;
+btn.setPointerCapture(e.pointerId); 
+
+    if (e.pointerType === "mouse") {
+      e.preventDefault();
+    }
+
+    startX = e.clientX;
+    startY = e.clientY;
+
+    cancelled = false;
+    longPress = false;
+
+    holdTimer = setTimeout(() => {
+
+      if (cancelled) return;
+
+      longPress = true;
+
+      step();
+
+      repeatTimer = setInterval(step, REPEAT_INTERVAL);
+
+    }, HOLD_DELAY);
+
+  });
+
+  btn.addEventListener("pointermove", e => {
+
+    if (e.pointerId !== activePointerId) return;
+    if (cancelled) return;
+
+    const dx = Math.abs(e.clientX - startX);
+    const dy = Math.abs(e.clientY - startY);
+
+    if (dx > MOVE_THRESHOLD || dy > MOVE_THRESHOLD) {
+      cancelled = true;
+      clearAll();
+    }
+
+  });
+
+  btn.addEventListener("pointerup", e => {
+
+    if (e.pointerId !== activePointerId) return;
+
+    if (!cancelled && !longPress) {
+      step();
+    }
+
+    finish();
+
+  });
+
+  btn.addEventListener("pointercancel", finish);
+  btn.addEventListener("blur", finish);
+
+}
+
+bindStepper(priceMinus, -1, "price");
+bindStepper(pricePlus, 1, "price");
+bindStepper(qtyMinus, -1, "qty");
+bindStepper(qtyPlus, 1, "qty");
+
+
+
+  
+
+
+
+
+
+
+
+ 
+
+
+
+  //quiz related functions 
+
+
+  let qIndex = 0;
+let selectedOption = null;
+
+const qTextEl = document.getElementById("q-text");
+const qOptionsEl = document.getElementById("q-options");
+const qStatusEl = document.getElementById("q-status");
+const qIndexEl = document.getElementById("q-index");
+const qPrevBtn = document.getElementById("q-prev");
+const qNextBtn = document.getElementById("q-next");
+
+function renderQuiz(){
+   if (!quizQuestions || !quizQuestions.length) return;
+  const item = quizQuestions[qIndex];
+  selectedOption = null;
+
+  qTextEl.textContent = item.prompt;
+  qIndexEl.textContent = `Task ${qIndex + 1} of ${quizQuestions.length}`;
+  qPrevBtn.disabled = qIndex === 0;
+  qNextBtn.disabled = qIndex === quizQuestions.length - 1;
+
+  qOptionsEl.innerHTML = "";
+  if (item.options) {
+    item.options.forEach(opt => {
+      const btn = document.createElement("button");
+      btn.className = "opt-btn";
+      btn.textContent = opt;
+      btn.addEventListener("click", () => {
+        selectedOption = opt;
+        evaluateQuiz();
+      });
+      qOptionsEl.appendChild(btn);
+    });
+  }
+
+  evaluateQuiz();
+
+  startGhostAnimation();
+}
+
+/* Runs on every option click AND every graph state change,
+   so combo questions (options + validationState) always
+   reflect the current truth of both checks.
+   NOTE: correct option selections get a "✓ Correct!" status message,
+   but the button itself is never highlighted green — only wrong
+   selections get the red highlight, so the button color alone never
+   tips off which option is correct before it's chosen. */
+function evaluateQuiz(){
+  const item = quizQuestions[qIndex];
+  const hasOptions = !!(item.options && item.options.length);
+  const hasState = !!item.validationState;
+
+  // 1. ALWAYS evaluate the graph state first if the question has one, 
+  // completely independent of whether an option is selected.
+  let stateMatch = false;
+if (hasState) {
+  stateMatch = checkStateValidation(item, state);
+}
+
+  if (hasOptions) {
+    // 2. If no option is picked yet, handle the "clean/initial" state safely
+    if (selectedOption === null) {
+      [...qOptionsEl.children].forEach(b => b.classList.remove("correct","wrong"));
+      
+      if (hasState) {
+        // If there's a graph, update its status message live *before* an option is picked
+        if (!stateMatch) {
+          qStatusEl.textContent = "Adjust the graph to match this question's target first.";
+          qStatusEl.className = "quiz-status pending";
+          if (!isDragging) startGhostAnimation();
+        } else {
+          qStatusEl.textContent = "Graph matches! Now select an option.";
+          qStatusEl.className = "quiz-status pending";
+          stopGhostAnimation();
+        }
+      } else {
+        // Options-only question with nothing selected yet
+        qStatusEl.textContent = "";
+        qStatusEl.className = "quiz-status";
+      }
+      return; // Safe to return early now because graph validation already happened
+    }
+
+    // 3. Process the option grading since we know selectedOption !== null
+    const optionCorrect = checkOptionAnswer(item, selectedOption);
+
+    if (hasState) {
+      const overallCorrect = stateMatch && optionCorrect;
+
+      [...qOptionsEl.children].forEach(btn => {
+        btn.classList.remove("wrong");
+        if (btn.textContent === selectedOption && !overallCorrect) {
+          btn.classList.add("wrong");
+        }
+      });
+
+      if (!stateMatch) {
+        qStatusEl.textContent = "Adjust the graph to match this question's target first.";
+        qStatusEl.className = "quiz-status pending";
+        if (!isDragging) startGhostAnimation();
+      } else if (!optionCorrect) {
+        qStatusEl.textContent = "Select the right option.";
+        qStatusEl.className = "quiz-status pending";
+        stopGhostAnimation();
+      } else {
+        qStatusEl.textContent = "✓ Correct!";
+        qStatusEl.className = "quiz-status correct";
+        stopGhostAnimation();
+      }
+    } else {
+      // options only, no graph target
+      [...qOptionsEl.children].forEach(btn => {
+        btn.classList.remove("wrong");
+        if (btn.textContent === selectedOption && !optionCorrect) {
+          btn.classList.add("wrong");
+        }
+      });
+
+      if (optionCorrect) {
+        qStatusEl.textContent = "✓ Correct!";
+        qStatusEl.className = "quiz-status correct";
+      } else {
+        qStatusEl.textContent = "Not quite — try again.";
+        qStatusEl.className = "quiz-status pending";
+      }
+    }
+
+  } else if (hasState) {
+    // 4. Graph-only question, no options (uses the stateMatch evaluated at the top)
+    qStatusEl.textContent = stateMatch
+      ? "✓ Correct — the graph matches this target!"
+      : "Keep adjusting the graph to match the target.";
+    qStatusEl.className = "quiz-status " + (stateMatch ? "correct" : "pending");
+
+    if (stateMatch) {
+      stopGhostAnimation();
+    } else {
+      if (!isDragging) startGhostAnimation();
+    }
+
+  } else {
+    qStatusEl.textContent = "";
+    qStatusEl.className = "quiz-status";
+  }
+}
+
+qPrevBtn.addEventListener("click", () => {
+  if (qIndex > 0){ qIndex--; renderQuiz(); }
+});
+qNextBtn.addEventListener("click", () => {
+  if (qIndex < quizQuestions.length - 1){ qIndex++; renderQuiz(); }
+});
+
+renderQuiz();
+
+  /* ---------------------------------------------------------
+     RENDER — sync everything to state
+  --------------------------------------------------------- */
+  function render(){
+    const pStr = state.P.toFixed(1);
+    const qStr = state.Q.toFixed(1);
+    const rStr = fix(state.R).toFixed(1);
+
+    // Desktop controls
+    if (document.activeElement !== priceNumber) priceNumber.value = pStr;
+    priceRange.value = pStr;
+    if (document.activeElement !== qtyNumber) qtyNumber.value = qStr;
+    qtyRange.value = qStr;
+
+    // Mobile controls
+    if (document.activeElement !== priceNumberM) priceNumberM.value = pStr;
+    if (document.activeElement !== qtyNumberM) qtyNumberM.value = qStr;
+
+    // Data displays
+    equationDisplay.textContent = `P = 2(${qStr}) = ${pStr}`;
+    revenueDisplay.textContent = "Revenue: " + rStr;
+
+    // Dot position
+    const cx = xScale(state.Q);
+    const cy = yScale(state.P);
+    dot.attr("cx", cx).attr("cy", cy);
+
+    // Projection lines
+    priceLine
+      .attr("x1", 0).attr("y1", cy)
+      .attr("x2", cx).attr("y2", cy);
+    qtyLine
+      .attr("x1", cx).attr("y1", innerH)
+      .attr("x2", cx).attr("y2", cy);
+
+    const item = quizQuestions[qIndex];
+if (item && item.validationState) {
+  const isCorrect = checkStateValidation(item, state);
+      
+      if (isCorrect) {
+        stopGhostAnimation();
+      } else {
+        // Detect if the user is actively typing in any input field
+        const inputs = [priceNumber, qtyNumber, priceNumberM, qtyNumberM];
+        const isTyping = inputs.includes(document.activeElement);
+
+        // Only resume animation if they aren't actively dragging or typing a number
+        if (!isDragging && !isTyping) {
+          startGhostAnimation();
+        }
+      }
+    }
+
+    evaluateQuiz();
+  }
+
+  render();
+
+
+
+})();
+
+
+</script>
+
+
+
+
+</body>
+</html>

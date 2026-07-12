@@ -1,0 +1,12 @@
+jab user hint par click karay ga to animation start ho gi. or band kab ho gi jab user ya to rerender karay ga yani drag wagira ya input ko change karay ga ya phir question re render ho ga. ya phir user jab dobara hint par click karay ga.
+
+consumer surplus k ye questions ho sakty hain k consumer surplus ko ye set karo ye price ko ye set karo or surplus report karo.
+
+
+sab se phely ye samjo k evaluate mein karna kia hay. sirf tum ny ye batana hy k answer correct hy k nahi. bus. ye evaluate hy.yani ye batao gy k phely graph select karo
+
+
+eik concern ye hy k tum ny selected button ka color green karna hay or baqi ka color white karna hay. or third concern ye hay k jab banda button par click karay to button ye check karay k aaia graph select hy k nahi agar select nahi to kahay k graph select karo or agar select hy to option dekhy agar option wrong hy to kahay sahi option select karo or agar sahi hy to correct kar dy.
+
+
+graph ki validation state se ho gi. 

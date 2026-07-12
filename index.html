@@ -1,433 +1,586 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Supply Curve Lesson</title>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <style>
-        :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --text-main: #1f2937;
-            --bg-light: #f3f4f6;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Law of Demand — Interactive Lesson</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+  :root{
+    --ink:#1a1a2e;
+    --sub:#5a5a72;
+    --accent:#2b6cb0;
+    --accent-dark:#1e4e8c;
+    --line:#e2e5ec;
+    --bg-panel:#f7f8fa;
+    --good:#2f9e44;
+    --radius:10px;
+    --proj:#9aa3b5;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);
+    background:#eef1f6;
+    overflow:hidden;
+  }
+  .app{
+    display:flex;
+    width:100%;
+    height:100vh;
+    gap:10px;
+    padding: 10px 20px 10px 10px;
+    
+  }
+  .col-left{
+    flex:0 0 60%;
+    max-width:60%;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    min-height:0;
+  }
+  .col-right{
+    flex:0 0 40%;
+    max-width:40%;
+    height:100%;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    overflow-y:auto;
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            color: var(--text-main);
-            background-color: #fafafa;
-            display: flex;
-            align-items: flex-start;
-        }
+  }
+  .card{
+    background:#ffffff;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:10px 20px 20px 20px;
+    box-shadow:0 1px 2px rgba(20,20,40,0.04);
+  }
 
-        /* Master Grid Split Layout */
-        .workspace-grid {
-            display: grid;
-            grid-template-columns: 1.2fr 0.8fr; /* Left section handles 55-60% width */
-            gap: 25px;
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-            box-sizing: border-box;
-        }
+  
 
-        .interactive-section {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-        }
+  /* Graph */
+  .graph-card{
+    padding:6px;
+    flex:1 1 auto;
+    min-height:0;
+    display:flex;
+  }
+  #graph-svg {
+  display:block;
+  width:100%;
+  height:100%;
+  background:#ffffff;
+  cursor:grab;
+  /* Prevent text selection and visual callouts on long-press */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+  .axis path, .axis line{
+    stroke:#333;
+    shape-rendering:crispEdges;
+    stroke-width: 2.5px; /* Increased stroke width */
+  }
+  .axis text{
+    fill:var(--sub);
+    font-size:16px; /* Increased font size */
+    font-weight: 600;
+  }
+  .demand-line{
+    fill:none;
+    
+    stroke-width:4px; /* Increased line stroke width */
+  }
+  .proj-line{
+    stroke:var(--proj);
+    stroke-width:2px; /* Increased line stroke width */
+    stroke-dasharray:5,4;
+  }
+  .drag-dot{
+    fill:#ffffff;
+    stroke:var(--accent);
+    stroke-width:4px;
+    cursor:grab;
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+  }
+  .drag-dot:active{cursor:grabbing;}
+  .axis-label{
+    fill:var(--ink);
+    font-size:16px; /* Increased axis label font size */
+    font-weight:600;
+  }
 
-        /* Cleaned, Simplified Lesson Container */
-        .lesson-text-section {
-            display: flex;
-            flex-direction: column;
-            background-color: var(--bg-light);
-            padding: 24px;
-            border-left: 5px solid var(--primary);
-            border-radius: 6px;
-            height: fit-content;
-        }
+  /* data display */
+  .data-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    flex:0 0 auto;
+    padding:8px 10px;
+  }
+  .data-block{
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:6px 10px;
+    text-align:center;
+  }
+  .data-block .label{
+    font-size:13px; /* Increased font size */
+    color:var(--sub);
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    margin-bottom:2px;
+  }
+  .data-block .value{
+    font-size:22px; /* Increased font size for general data blocks */
+    font-weight:700;
+    color:var(--accent-dark);
+  }
+  /* Keep original font size for calculated Equation and Revenue on desktop */
+  #equation-display, #revenue-display {
+    font-size: 18px;
+  }
 
-        h1 {
-            font-size: 1.6rem;
-            margin-top: 0;
-            color: #111827;
-        }
+  /* ---------- Desktop controls (sliders) ---------- */
+  .controls-desktop{
+    flex:0 0 auto;
+    padding:8px 10px;
+  }
+  .controls-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .control-block{
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:6px 10px;
+  }
+  .control-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    margin-bottom:4px;
+  }
+  .control-top label{
+    font-size:15px; /* Increased font size */
+    font-weight:600;
+    color:var(--ink);
+  }
+  .control-top input[type="number"]{
+    width:70px;
+    padding:3px 6px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-size:16px; /* Increased font size */
+    text-align:right;
+  }
+  input[type="range"]{
+    width:100%;
+    accent-color:var(--accent);
+    height:18px;
+  }
 
-        .lesson-text-section p, .lesson-text-section li {
-            font-size: 1.1rem;
-            line-height: 1.5;
-            color: #374151;
-        }
+  /* ---------- Mobile controls (stepper rows) ---------- */
+  .controls-mobile{
+    display:none;
+    flex:0 0 auto;
+    padding:8px 10px;
+    flex-direction:column;
+    gap:8px;
+  }
+  
+.stepper-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px; /* Reduced gap slightly to fit inner items snugly */
 
-        .lesson-text-section ul {
-            padding-left: 20px;
-            margin-top: 5px;
-        }
+    background: var(--bg-panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px;
+    
+    /* 👇 Crucial: allows child offsets to calculate correctly */
+    position: relative; 
+    
+    /* 👇 Shrink the block container size slightly to help push buttons out */
+    margin: 0 21px; /* 21px is exactly half of your 42px button width */
+}
 
-        .lesson-text-section li {
-            margin-bottom: 8px;
-        }
+/* Target the minus button (first element) */
+.stepper-row .step-btn:first-child {
+    margin-left: -29px; /* Half button width (21px) + padding offset (8px) */
+    position: relative;
+    z-index: 2;
+}
 
-        /* Chart Canvas Size Configurations */
-        #chart-wrapper {
-            width: 100%;
-            height: 55vh; /* Standard desktop percentage bounds */
-            position: relative;
-            touch-action: pan-y; /* Smooth mobile dragging */
-        }
+/* Target the plus button (last element) */
+.stepper-row .step-btn:last-child {
+    margin-right: -29px; /* Half button width (21px) + padding offset (8px) */
+    position: relative;
+    z-index: 2;
+}
 
-        /* Responsive Mobile Layout Rules Toggle */
-        @media (max-width: 768px) {
-            body {
-                padding: 0;
-            }
-            .workspace-grid {
-                grid-template-columns: 1fr; /* Single column layout */
-                padding: 12px;
-                border-radius: 0;
-                box-shadow: none;
-                gap: 15px;
-            }
-            .interactive-section {
-                order: 1; /* Interactive graph sits at the top */
-            }
-            #chart-wrapper {
-                height: 55vh; /* Extended workspace height layout rule */
-            }
-            .lesson-text-section {
-                order: 2; /* Simple instructions sit underneath */
-                border-left: none;
-                border-top: 5px solid var(--primary);
-                padding: 15px;
-            }
-        }
+/* Adjust layout inputs to make sure they scale cleanly inside the remaining space */
+.step-label {
+    flex: 1; /* Allows label to take up remaining space smoothly */
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
 
-        /* Controls Panel Options Grid */
-        .controls {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            margin-top: 15px;
-            background: #f8fafc;
-            padding: 20px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-        }
+}
 
-        .control-row {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
+.stepper-row input[type="number"] {
+    width: 65px; /* Slightly reduced to account for tighter container footprint */
+    height: 42px;
+    text-align: center;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 17px;
+    padding: 0 4px;
+    flex-shrink: 0;
+}
 
-        .label-group label {
-            font-size: 1.35rem; /* Large font size for Price and Quantity labels */
-            font-weight: 800;
-            color: #0f172a;
-        }
+.step-btn {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 24px;
+    font-weight: 700;
+    flex-shrink: 0;
 
-        .slider-input-container {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            width: 100%;
-        }
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
 
-        /* Thick, Touch-Friendly Sliders */
-        .thick-slider {
-            flex-grow: 1;
-            -webkit-appearance: none;
-            appearance: none;
-            height: 18px; /* Chunky touch slider track height */
-            border-radius: 9px;
-            background: #cbd5e1;
-            outline: none;
-        }
+    /* 👇 Prevents text selection/copy popup on long-press */
+    -webkit-user-select: none;  /* Safari/Chrome iOS */
+    -moz-user-select: none;     /* Firefox */
+    -ms-user-select: none;      /* IE/Edge */
+    user-select: none;          /* Standard */
+    -webkit-touch-callout: none; /* Disables standard iOS long-press menu */
+}
+  .step-btn:active{
+    background:var(--accent);
+    color:#fff;
+  }
 
-        .thick-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: var(--primary);
-            cursor: pointer;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.16);
-        }
+  /* Quiz */
+  .quiz-header {
+  display: flex;
+  flex-direction: column; /* Forces layout into two lines */
+  gap: 8px;
+  margin-bottom: 12px;
+}
+  .quiz-header h2{
+    
+    font-size:20px;
+    margin:0;
 
-        .thick-slider::-moz-range-thumb {
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            background: var(--primary);
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.16);
-        }
+    width: 100%;
+  
+  
+  
+  } 
+  
+  .quiz-header .quiz-sub-row {
+  display: flex;
+  justify-content: space-between; /* Pushes tracker left, buttons right */
+  align-items: center;
+  width: 100%;
+}
+  
+  /* Increased font size */
+  #q-index{
+    font-size:16px; /* Increased font size */
+    color:var(--sub);
+    order: 1;
+  }
+  .quiz-question{
+    font-size:16.5px; /* Increased font size */
+    line-height:1.4;
+    min-height:44px;
+    margin-bottom:6px;
+  }
+ 
+  .quiz-buttons{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+    order: 2;
+  }
+  .quiz-buttons .nav-group{
+    display:flex;
+    gap:20px;
+  }
 
-        /* Chunky Form Input Fields */
-        .num-input {
-            width: 95px;
-            padding: 10px 5px;
-            font-size: 1.25rem; /* Larger font layout sizes */
-            border: 2px solid #94a3b8;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: 800;
-            color: var(--primary-dark);
-        }
+  .quiz-options{ display:flex; flex-direction:column; gap:6px; margin-bottom:8px; }
+.opt-btn{ text-align:left; padding:8px 10px; }
+.opt-btn.correct{ background:#eaf7ec; border-color:var(--good); color:var(--good); }
+.opt-btn.wrong{ background:#fdecec; border-color:#e03131; color:#e03131; }
+.quiz-status{ font-size:15px; font-weight:600; min-height:18px; margin-bottom:8px; } /* Increased font size */
+.quiz-status.correct{ color:var(--good); }
+.quiz-status.pending{ color:var(--sub); }
+.quiz-action-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-top:10px;
+}
+.quiz-action-row #q-check{
+  flex:1 1 auto;
+}
+  button{
+    font-family:inherit;
+    font-size:18px; /* Increased font size */
+    padding:6px 12px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:#fff;
+    cursor:pointer;
+    color:var(--ink);
+    transition:background 0.15s, transform 0.05s;
+  }
+  button:hover{background:var(--bg-panel);}
+  button:active{transform:translateY(1px);}
+  button.primary{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+  }
+  button.primary:hover{background:var(--accent-dark);}
+  button:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+  }
 
-        .num-input:focus {
-            border-color: var(--primary);
-            outline: none;
-        }
+  /* Docs */
+  .docs p{
+    font-size:15.5px; /* Increased font size */
+    line-height:1.45;
+    color:#333;
+    margin:0 0 6px 0;
+  }
+  .docs h2{font-size:17px;margin:0 0 6px 0;} /* Increased font size */
+  .docs ul{
+    margin:0;
+    padding-left:16px;
+    font-size:15.5px; /* Increased font size */
+    line-height:1.45;
+    color:#333;
+  }
+  .docs li{margin-bottom:4px;}
 
-        /* Vector Graphic Styles Elements Rules */
-        .axis-line {
-            stroke: #000000;
-            stroke-width: 4px; /* Bold axis rules */
-        }
+  @media (max-width: 900px){
+    html,body{overflow:auto;}
+    .app{flex-direction:column; height:auto;padding-right:10px;}
+    .col-left, .col-right{flex:1 1 auto; max-width:100%;}
+    .col-left{height:auto;}
+    
+    /* Removed fixed min-height and added aspect-ratio to get rid of white margin below graph */
+    .graph-card{
+      min-height:auto;
+      aspect-ratio: 560 / 420;
+    }
+    
+    .controls-desktop{display:none;}
+    .controls-mobile{display:flex;}
 
-        .axis-text {
-            font-size: 19px; /* Large font size for numbers */
-            font-weight: bold;
-            fill: #000000;
-        }
+    /* Reduced font size for Equation and Revenue on mobile to force it onto a single line */
+    #equation-display, #revenue-display {
+      font-size: 13px !important;
+      white-space: nowrap;
+    }
 
-        .axis-label {
-            font-size: 19px; /* Large font size for axis titles */
-            font-weight: 900;
-            fill: #1e293b;
-        }
+    .axis text{
+      font-size:18px;
+      font-weight: 600;
+    }
 
-        .supply-line {
-            stroke: #dc2626;
-            stroke-width: 6px; /* Stroke width 8 */
-            stroke-linecap: butt; /* Perfectly locks flush onto vector targets */
-        }
+  }
 
-        .projection-line {
-            stroke: #475569;
-            stroke-width: 5px; /* Stroke width 6 */
-            stroke-dasharray: 7,7;
-        }
 
-        .interactive-dot {
-            fill: var(--primary);
-            cursor: grab;
-
-            touch-action: none
-        }
-        
-        .interactive-dot:active {
-            cursor: grabbing;
-        }
-
-        .dot-glow {
-            fill: var(--primary);
-            fill-opacity: 0.22;
-            cursor: grab; /* Shows the hand icon when hovering over the glow */
-            touch-action: none
-        }
-        .dot-glow:active {
-            cursor: grabbing;
-        }
-    </style>
+  /* Ghost Animation Styling no 1*/
+  .ghost-dot {
+    fill: #ffffff;
+    stroke: var(--accent);
+    stroke-width: 3px;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  .ghost-proj {
+    stroke: var(--proj);
+    stroke-width: 2.5px; /* Increased stroke width */
+    stroke-dasharray: 4,4;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+</style>
 </head>
 <body>
 
-<div class="workspace-grid">
-    
-    <div class="interactive-section">
-        <div id="chart-wrapper"></div>
+<div class="app">
 
-        <div class="controls">
-            <div class="control-row">
-                <div class="label-group">
-                    <label for="price-slider">Price (P)</label>
-                </div>
-                <div class="slider-input-container">
-                    <input type="range" id="price-slider" class="thick-slider" min="0" max="20" step="0.05" value="10">
-                    <input type="number" id="price-input" class="num-input" min="0" max="20" step="0.1" value="10.0">
-                </div>
-            </div>
+  <!-- LEFT COLUMN -->
+  <div class="col-left">
 
-            <div class="control-row">
-                <div class="label-group">
-                    <label for="quant-slider">Quantity supplied (Q_s)</label>
-                </div>
-                <div class="slider-input-container">
-                    <input type="range" id="quant-slider" class="thick-slider" min="0" max="10" step="0.025" value="5">
-                    <input type="number" id="quant-input" class="num-input" min="0" max="10" step="0.1" value="5.0">
-                </div>
-            </div>
+    <div class="card graph-card">
+      <svg id="graph-svg" viewBox="0 0 560 420" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+
+    <div class="card data-row">
+      <div class="data-block">
+        <div class="label">Active Equation</div>
+        <div class="value" id="equation-display">P = 20 − 2Q</div>
+      </div>
+      <div class="data-block">
+        <div class="label">Revenue (P × Q)</div>
+        <div class="value" id="revenue-display">Revenue: 50</div>
+      </div>
+    </div>
+
+    <!-- Desktop sliders -->
+    <div class="card controls-desktop">
+      <div class="controls-row">
+        <div class="control-block">
+          <div class="control-top">
+            <label for="price-number">Price (P)</label>
+            <input type="number" id="price-number" min="0" max="20" step="0.2" value="10">
+          </div>
+          <input type="range" id="price-range" min="0" max="20" step="0.2" value="10">
         </div>
+        <div class="control-block">
+          <div class="control-top">
+            <label for="qty-number">Quantity (Q)</label>
+            <input type="number" id="qty-number" min="0" max="10" step="0.1" value="5">
+          </div>
+          <input type="range" id="qty-range" min="0" max="10" step="0.1" value="5">
+        </div>
+      </div>
     </div>
 
-    <div class="lesson-text-section">
-        <h1>How to Use This Graph</h1>
-        <p>This graph shows how the supply of a product changes when its price goes up or down. It uses this simple formula:</p>
-        <p style="text-align: center; font-size: 1.35rem; font-weight: bold; color: #dc2626; margin: 10px 0;">P = 2Q<sub>s</sub></p>
-        <p><strong>The Golden Rule:</strong> When the Price rises, the Quantity supplied goes up! When the Price drops, the Quantity supplied drops.</p>
-        
-        <p><strong>Try these 3 tools to see it work:</strong></p>
-        <ul>
-            <li><strong>Drag the Blue Dot:</strong> Click and hold the blue dot on the red line, then move it along the curve.</li>
-            <li><strong>Use the Sliders:</strong> Move the thick blue sliders below the graph with your mouse or finger.</li>
-            <li><strong>Type Numbers:</strong> Click inside the number boxes, type any number you want, and hit Enter.</li>
-        </ul>
-    </div>
+    <!-- Mobile stepper rows -->
+    <div class="card controls-mobile">
+    
+
+     <div class="stepper-row">
+
+    <button class="step-btn" id="price-minus" type="button">−</button>
+
+    <span>← Price</span>
+
+    <input
+        type="number"
+        id="price-number-m"
+        min="0"
+        max="20"
+        step="0.2"
+        value="10">
+
+    <span>Price →</span>
+
+    <button class="step-btn" id="price-plus" type="button">+</button>
 
 </div>
 
-<script>
-    const wrapper = d3.select("#chart-wrapper");
+<div class="stepper-row">
+
+    <button class="step-btn" id="qty-minus" type="button">−</button>
+
+    <span>← Qty</span>
+
+    <input
+        type="number"
+        id="qty-number-m"
+        min="0"
+        max="10"
+        step="0.1"
+        value="5">
+
+    <span>Qty →</span>
+
+    <button class="step-btn" id="qty-plus" type="button">+</button>
+
+</div>
+<!--new code end-->
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="col-right">
+
+  <div class="card">
+  <div class="quiz-header">
+    <h2>Learn by Doing</h2>
     
-    function renderChart() {
-        wrapper.selectAll("*").remove();
+    <!-- New wrapper row to separate layout from the main title -->
+    <div class="quiz-sub-row">
+      <span id="q-index">Question 1 of 3</span>
+      
+      <div class="quiz-buttons">
+        <div class="nav-group">
+          <button id="q-prev">Previous</button>
+          <button id="q-next">Next</button>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+  <div class="quiz-question" id="q-text"></div>
+  <div class="quiz-options" id="q-options"></div>
+  <div class="quiz-status" id="q-status"></div>
+</div>
 
-        const width = wrapper.node().getBoundingClientRect().width;
-        const height = wrapper.node().getBoundingClientRect().height;
+    <div class="card docs">
+      <h1>Understanding the Law of Supply</h1>
+<p>
+  This lesson explores the <strong>Law of Supply</strong>: as the price of a good
+  rises, the quantity supplied rises, and as the price falls, the quantity supplied
+  falls, other things being equal. The graph shows a linear supply curve,
+  <strong>P = 2Q</strong>, where Price is on the vertical axis and Quantity is on
+  the horizontal axis.
+</p>
 
-        // FIXED: Increased top from 15 to 35 and right from 35 to 45 to stop the dot from clipping
-       const isMobile = window.innerWidth <= 768;
+<h2>How to Use the Playground</h2>
+<ul>
+  <li>Drag the dot along the supply curve to change Price and Quantity together.</li>
+  <li>Use the number fields, slider, or +/− buttons (on mobile) — Price and Quantity always stay linked by the equation.</li>
+  <li>Observe how a higher price leads to a larger quantity supplied, while a lower price leads to a smaller quantity supplied.</li>
+  <li>Experiment with different prices to better understand the positive relationship between Price and Quantity Supplied.</li>
+</ul>
+    </div>
 
-    // FIX: Tightened margins specifically for mobile screens
-        const margin = { 
-            top: 35, 
-            right: isMobile ? 22 : 45,  // Drops to 15px on mobile, stays 45px on desktop
-            bottom: 55, 
-            left: isMobile ? 40 : 40    // Slightly tightened left margin too so graph stays balanced
-        };
-        const chartWidth = width - margin.left - margin.right;
-        const chartHeight = height - margin.top - margin.bottom;
+  </div>
 
-        const svg = wrapper.append("svg")
-            .attr("width", "100%")
-            .attr("height", "100%")
-            .attr("viewBox", `0 0 ${width} ${height}`)
-            .attr("preserveAspectRatio", "xMidYMid meet");
+</div>
 
-        const g = svg.append("g")
-            .attr("transform", `translate(${margin.left},${margin.top})`);
 
-        // Equations Setup Matrix Definitions for Supply (P = 2Qs)
-        function getQ(P) { return P / 2; }
-        function getP(Q) { return 2 * Q; }
-
-        // Core Alignment Update: Domains are structured cleanly for limits [Q: 0 to 10] and [P: 0 to 20]
-        const xScale = d3.scaleLinear().domain([0, 10]).range([0, chartWidth]);
-        const yScale = d3.scaleLinear().domain([0, 20]).range([chartHeight, 0]);
-
-        // Draw Axes Vector Paths
-        g.append("line").attr("class", "axis-line").attr("x1", 0).attr("y1", chartHeight).attr("x2", chartWidth).attr("y2", chartHeight);
-        g.append("line").attr("class", "axis-line").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", chartHeight);
-
-        const xTicks = d3.range(0, 11, 2);
-        const yTicks = d3.range(0, 21, 4);
-
-        // Numeric Tick Text Element Printers
-        // Numeric Tick Text Element Printers
-g.selectAll(".x-tick").data(xTicks).enter().append("text")
-    .attr("class", "axis-text")
-    .attr("x", d => xScale(d))
-    .attr("y", chartHeight + 20) // REDUCED from 28 to 16 (moves numbers up closer to X-axis)
-    .attr("text-anchor", "middle")
-    .text(d => d);
-
-g.selectAll(".y-tick").data(yTicks).enter().append("text")
-    .attr("class", "axis-text")
-    .attr("x", -8)               // REDUCED from -15 to -8 (moves numbers right closer to Y-axis)
-    .attr("y", d => yScale(d) + 6) 
-    .attr("text-anchor", "end")
-    .text(d => d);
-
-        // Grid Title Labels Text Nodes
-        g.append("text").attr("class", "axis-label").attr("x", chartWidth).attr("y", chartHeight + 50).attr("text-anchor", "end").text("Quantity Supplied (Q_s)");
-        g.append("text").attr("class", "axis-label").attr("y", -15).attr("x", 50).attr("text-anchor", "end").text("Price (P)");
-
-        // Render Red Upward-Sloping Supply Line (Stroke width 8)
-        g.append("line")
-            .attr("class", "supply-line")
-            .attr("x1", xScale(0)).attr("y1", yScale(0))
-            .attr("x2", xScale(10)).attr("y2", yScale(20));
-
-        // Coordinate Intersection Track Guideline Paths (Stroke width 6)
-        const horizLine = g.append("line").attr("class", "projection-line");
-        const vertLine = g.append("line").attr("class", "projection-line");
-
-        // Custom radius mapping setup explicitly tracking 0.17 system coordinate metrics scale sizes
-        const dotRadius = Math.max(13, xScale(0.17) - xScale(0));
-        const glowRadius = dotRadius * 2.0; // Soft outer glow circle
-
-        const glow = g.append("circle").attr("class", "dot-glow").attr("r", glowRadius);
-        const dot = g.append("circle").attr("class", "interactive-dot").attr("r", dotRadius);
-
-        // Universal UI Sync Driver Function
-        function updateAll(price, origin) {
-            price = Math.max(0, Math.min(20, price));
-            let quantity = getQ(price);
-
-            let cx = xScale(quantity);
-            let cy = yScale(price);
-
-            dot.attr("cx", cx).attr("cy", cy);
-            glow.attr("cx", cx).attr("cy", cy);
-
-            horizLine.attr("x1", 0).attr("y1", cy).attr("x2", cx).attr("y2", cy);
-            vertLine.attr("x1", cx).attr("y1", chartHeight).attr("x2", cx).attr("y2", cy);
-
-            if (origin !== 'price-slider') d3.select("#price-slider").property("value", price);
-            if (origin !== 'price-input') d3.select("#price-input").property("value", parseFloat(price.toFixed(2)));
-            if (origin !== 'quant-slider') d3.select("#quant-slider").property("value", quantity);
-            if (origin !== 'quant-input') d3.select("#quant-input").property("value", parseFloat(quantity.toFixed(2)));
-        }
-
-        // --- Drag Behavior Processing Pipeline Hook ---
-        const dragBehavior = d3.drag()
-            .on("drag", function(event) {
-                let currentQ = xScale.invert(event.x);
-                currentQ = Math.max(0, Math.min(10, currentQ));
-                updateAll(getP(currentQ), 'drag');
-            });
-        dot.call(dragBehavior);
-        glow.call(dragBehavior);
-
-        // --- Form Interaction Observers Matrix ---
-        d3.select("#price-slider").on("input", function() {
-            updateAll(+this.value, 'price-slider');
-        });
-
-        d3.select("#quant-slider").on("input", function() {
-            updateAll(getP(+this.value), 'quant-slider');
-        });
-
-        d3.select("#price-input").on("input", function() {
-            let val = +this.value;
-            if(!isNaN(val)) updateAll(val, 'price-input');
-        });
-
-        d3.select("#quant-input").on("input", function() {
-            let val = +this.value;
-            if(!isNaN(val)) updateAll(getP(val), 'quant-input');
-        });
-
-        // Initialize state engine values on startup loads
-        const initialPrice = +d3.select("#price-slider").property("value");
-        updateAll(initialPrice, 'init');
-    }
-
-    renderChart();
-    window.addEventListener("resize", renderChart);
-</script>
+<script src="model.js"></script>
+<script src="renderquiz.js"></script>
+<script src="graph.js"></script>
+<script src="ghost.js"></script>
+<script src="quiz.js"></script>
+<script src="main.js"></script>
 
 </body>
 </html>
